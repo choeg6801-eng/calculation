@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>선적일 역산 캘린더 만든 과정</title>
+<meta name="description" content="해외영업 담당자를 위한 선적일 역산 도구를 만든 과정: 문제, 내린 결정, 실제 화면, 솔직한 한계.">
+<meta name="theme-color" content="#0E2744">
+<meta property="og:type" content="article">
+<meta property="og:title" content="선적일 역산 캘린더, 이렇게 만들었습니다">
+<meta property="og:description" content="무엇을 풀려고 했고, 어떤 결정을 했고, 아직 못 한 것은 무엇인지 정리했습니다.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230E2744'/%3E%3Crect x='5' y='12' width='9' height='8' fill='%231B4D86'/%3E%3Crect x='15' y='12' width='6' height='8' fill='%231B80A8'/%3E%3Crect x='22' y='12' width='5' height='8' fill='%230B7F8A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --color-bg:#F3F5F8; --color-surface:#FFFFFF; --color-text:#14202E; --color-text-sub:#55627A; --color-line:#DCE1EA;
+    --color-header:#0E2744; --color-brand:#2F63E8; --color-brand-hover:#1E4FC4; --color-on-header-border:#FFFFFF; --color-accent:#0B7F8A;
+    --color-ok:#146C34; --color-ok-bg:#E3F4EA; --color-soon:#9A5A06; --color-soon-bg:#FDF0D9;
+    --focus:#9CC3F6; --s1:8px; --s2:16px; --s3:24px; --s4:32px; --s6:48px; --s8:64px;
+    --font:'IBM Plex Sans KR',system-ui,sans-serif; --mono:'IBM Plex Mono','IBM Plex Sans KR',ui-monospace,monospace;
+    --ease:cubic-bezier(.23,1,.32,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font);font-size:16px;line-height:1.7}
+  body{word-break:keep-all;overflow-wrap:break-word}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 var(--s3)}
+  a:focus-visible,button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+  /* 버튼 */
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 var(--s4);border:1px solid var(--color-on-header-border);border-radius:6px;background:var(--color-brand);color:#fff;font:inherit;font-size:16px;font-weight:600;text-decoration:none;cursor:pointer;transition:transform 100ms ease-out,background-color 150ms ease}
+  .btn{transition:transform 150ms var(--ease)}
+  .btn:hover{background:var(--color-brand-hover);transform:translateY(-2px)}
+  .btn:active{transform:scale(.97)}
+  .btn.line{background:transparent;border-color:rgba(255,255,255,.6)}
+  .btn.line:hover{background:rgba(255,255,255,.14)}
+  .acts{display:flex;gap:var(--s2);flex-wrap:wrap}
+
+  /* 히어로 */
+  .hero{background:var(--color-header);color:#fff;padding:0 0 0}
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:var(--s3) 0;border-bottom:1px solid rgba(255,255,255,.22)}
+  .nav b{font-weight:600;font-size:16px}
+  .nav a{color:#fff;font-size:14px;text-underline-offset:4px;min-height:44px;display:inline-flex;align-items:center;transition:color 150ms ease}
+  .nav a:hover{color:#BFD3FF;text-decoration-thickness:2px}
+  .nav a:active{opacity:.75}
+  @media (prefers-reduced-motion:reduce){.nav a{transition:none}}
+    .hero h1{margin:0 0 var(--s3);font-size:56px;font-weight:300;letter-spacing:-.03em;line-height:1.18}
+  .hero h1 strong{font-weight:600}
+  .hero p.lead{margin:0 0 var(--s4);font-size:19px;line-height:1.7;color:rgba(255,255,255,.82);max-width:640px}
+
+  /* 맨 위 큰 사진 + 사진 위에 얹힌 제목 패널 */
+  .banner{position:relative;height:clamp(480px,50vw,640px)}
+  .banner-img{position:absolute;inset:0;overflow:hidden;background:var(--color-header)}
+  .banner-img img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 30%;animation:fade .9s var(--ease) both}
+  .ai-tag{position:absolute;right:var(--s3);bottom:var(--s2);font-size:12px;color:#fff;background:rgba(14,39,68,.72);padding:4px 10px;border-radius:4px}
+  .banner-wrap{position:relative;height:100%;display:flex;align-items:flex-end}
+  .hero-panel{background:var(--color-header);color:#fff;padding:var(--s4) var(--s6) var(--s4) var(--s4);margin-left:calc(-1 * var(--s4));max-width:640px;animation:rise .6s var(--ease) .2s both}
+  .hero-panel h1{font-size:46px}
+  .hero-panel p.lead{font-size:17px;margin-bottom:var(--s3)}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @media(max-width:900px){
+    .banner{height:auto}
+    .banner-img{position:relative;height:240px}
+    .banner-wrap{display:block;height:auto}
+    .hero-panel{max-width:none;margin-left:0;padding:var(--s4) 0 0}
+    .hero-panel h1{font-size:32px}
+  }
+  @media (prefers-reduced-motion:reduce){.banner-img img,.hero-panel{animation:none}}
+
+  /* 예시 화면 프레임 */
+  .frame-wrap{position:relative;z-index:1;margin-top:var(--s6);margin-bottom:-140px}
+  .frame{color:var(--color-text);background:var(--color-surface);border-radius:12px 12px 0 0;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 24px 48px rgba(7,20,38,.35)}
+  .frame-bar{display:flex;justify-content:space-between;gap:var(--s2);align-items:center;background:#1A2D45;color:rgba(255,255,255,.85);padding:12px var(--s3);font-size:13px}
+  .frame-bar span:last-child{color:rgba(255,255,255,.6)}
+  .frame-body{padding:var(--s4) var(--s4) var(--s6)}
+  .f-top{display:flex;justify-content:space-between;gap:var(--s4);flex-wrap:wrap;align-items:flex-end;margin-bottom:var(--s4)}
+  .f-etd small{display:block;font-size:13px;color:var(--color-text-sub)}
+  .f-etd b{font-family:var(--mono);font-size:28px;font-weight:600}
+  .f-kpis{display:flex}
+  .f-kpi{padding:0 var(--s3);border-left:1px solid var(--color-line)}
+  .f-kpi:first-child{border-left:0;padding-left:0}
+  .f-kpi small{display:block;font-size:13px;color:var(--color-text-sub)}
+  .f-kpi b{font-family:var(--mono);font-size:36px;font-weight:600;line-height:1.2;white-space:nowrap}
+  .f-kpi i{font-style:normal;font-size:12px;font-weight:600;color:var(--color-ok);background:var(--color-ok-bg);border-radius:4px;padding:2px 8px}
+  .bar{display:flex;height:40px;border-radius:4px;overflow:hidden;margin:var(--s2) 0 var(--s3)}
+  .bar div{line-height:40px;padding:0 8px;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-right:2px solid #fff}
+  .bar div:last-child{border-right:0}
+  .f-table{width:100%;border-collapse:collapse}
+  .f-table td{padding:12px 8px;border-bottom:1px solid var(--color-line);font-size:15px}
+  .f-table td:nth-child(2),.f-table td:nth-child(3){font-family:var(--mono);font-size:14px;white-space:nowrap}
+  .f-table .dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:var(--s1)}
+  .f-table .ok{font-size:12px;font-weight:600;color:var(--color-ok);background:var(--color-ok-bg);border-radius:4px;padding:2px 8px;white-space:nowrap}
+  .f-table tr.last td{font-weight:600;border-top:2px solid var(--color-header);border-bottom:0}
+
+  /* 본문 */
+  main{padding-top:calc(140px + var(--s8))}
+  section{padding:var(--s6) 0;border-top:1px solid var(--color-line)}
+  section:first-of-type{border-top:0;padding-top:0}
+  .split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--s8);align-items:start}
+  .eyebrow{font-size:15px;font-weight:600;color:var(--color-accent);margin:0 0 var(--s2)}
+  h2{margin:0;font-size:40px;font-weight:300;letter-spacing:-.025em;line-height:1.25}
+  h2 strong{font-weight:600}
+  .body p{margin:0 0 var(--s2);font-size:17px}
+  .sub{color:var(--color-text-sub)}
+
+  /* 단계 막대(예시 기준 리드타임) */
+  .legs{margin-top:var(--s3)}
+  .leg{display:grid;grid-template-columns:150px minmax(0,1fr) 44px;gap:var(--s2);align-items:center;font-size:14px;padding:6px 0}
+  .leg i{display:block;height:14px;border-radius:2px}
+  .leg b{font-family:var(--mono);font-weight:600;text-align:right}
+  .legs-cap{font-size:13px;color:var(--color-text-sub);margin:var(--s2) 0 0}
+
+  /* 결정 목록 */
+  .decisions{margin:var(--s4) 0 0;padding:0;list-style:none}
+  .decisions li{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--s6);padding:var(--s3) 0;border-top:1px solid var(--color-line)}
+  .decisions li:last-child{border-bottom:1px solid var(--color-line)}
+  .decisions h3{margin:0;font-size:19px;font-weight:600;line-height:1.5}
+  .decisions p{margin:0;color:var(--color-text-sub)}
+
+  /* 기능 */
+  .feats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s6);margin-top:var(--s4)}
+  .feats h3{margin:0 0 var(--s1);font-size:18px;font-weight:600}
+  .feats ul{margin:0;padding-left:18px;color:var(--color-text-sub)}
+  .feats li{margin-bottom:6px}
+
+  /* 흐름 GIF */
+  .flow{margin:var(--s4) 0 0}
+  .flow img{display:block;width:100%;height:auto;border:1px solid var(--color-line);border-radius:8px;background:var(--color-header)}
+  .flow figcaption{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);margin-top:var(--s1);font-size:14px;color:var(--color-text-sub)}
+  .flow figcaption b{display:block;color:var(--color-text);font-size:16px;font-weight:600}
+  .pause{flex:none;min-height:44px;padding:0 var(--s2);border:1px solid var(--color-line);border-radius:6px;background:var(--color-surface);color:var(--color-text);font:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:transform 150ms var(--ease)}
+  .pause:hover{background:var(--color-bg);transform:translateY(-1px)}
+  .pause:active{transform:scale(.97)}
+  .pause:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  @media(max-width:640px){.flow figcaption{flex-direction:column}}
+  @media (prefers-reduced-motion:reduce){.pause{transition:none}.pause:hover,.pause:active{transform:none}}
+
+  /* 실제 화면 */
+  .shots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4);margin-top:var(--s4)}
+  .shots figure{margin:0}
+  .shots a{display:block;position:relative;height:480px;overflow:hidden;border:1px solid var(--color-line);border-radius:8px;background:var(--color-header)}
+  .shots a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:72px;background:linear-gradient(to bottom,rgba(243,245,248,0),var(--color-bg));pointer-events:none}
+  .shots img{display:block;width:100%;height:auto;transition:transform .3s var(--ease)}
+  .shots a:hover img{transform:translateY(-8px)}
+  .shots figcaption{margin-top:var(--s1);font-size:14px;color:var(--color-text-sub)}
+  .shots figcaption b{display:block;color:var(--color-text);font-size:16px;font-weight:600}
+  .shots .mobile{grid-column:1/-1;max-width:320px}
+  .shots .mobile a{height:420px}
+  @media (prefers-reduced-motion:reduce){.shots img{transition:none}.shots a:hover img{transform:none}}
+  @media(max-width:900px){.shots{grid-template-columns:1fr}.shots a{height:380px}}
+
+  /* 한계 */
+  .limits{background:var(--color-surface);border-left:4px solid var(--color-accent);padding:var(--s3) var(--s4);border-radius:0 8px 8px 0}
+  .limits ul{margin:0;padding-left:20px}
+  .limits li{margin-bottom:var(--s1)}
+  code{font-family:var(--mono);font-size:14px;background:var(--color-surface);border:1px solid var(--color-line);border-radius:4px;padding:1px 6px}
+
+  /* 마무리 */
+  .cta{background:var(--color-header);color:#fff;padding:var(--s8) 0;margin-top:var(--s6)}
+  .cta h2{color:#fff;max-width:640px;margin-bottom:var(--s3)}
+  .cta p{margin:0 0 var(--s4);color:rgba(255,255,255,.8);max-width:560px;font-size:17px}
+  footer{padding:var(--s3) 0 var(--s6);font-size:13px;color:var(--color-text-sub)}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  @media(max-width:900px){
+    .hero h1{font-size:40px}
+    .split,.decisions li{grid-template-columns:1fr;gap:var(--s2)}
+    .feats{grid-template-columns:1fr;gap:var(--s4)}
+    h2{font-size:30px}
+    .frame-body{padding:var(--s3) var(--s2) var(--s4)}
+  }
+  @media(max-width:640px){
+    .wrap{padding:0 var(--s2)}
+    .hero h1{font-size:32px}
+    .hero p.lead{font-size:16px}
+    .btn{padding:0 var(--s3);width:100%}
+    .frame-wrap{margin-bottom:-80px}
+    main{padding-top:calc(80px + var(--s6))}
+    .frame-bar span:last-child{display:none}
+    .f-kpi{padding:0 var(--s1)}
+    .f-kpi b{font-size:22px}
+    .f-kpi small{font-size:12px}
+    .f-etd b{font-size:22px}
+    .f-table tr.hide-m{display:none}
+    .f-table td:nth-child(3),.f-table td:nth-child(4){display:none}
+    .f-table td:nth-child(1){white-space:nowrap}
+    .f-table td:nth-child(2){text-align:right}
+    .leg{grid-template-columns:104px minmax(0,1fr) 36px;font-size:13px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .btn{transition:none}
+    .btn:active{transform:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="nav"><b>선적일 역산 캘린더</b><a href="index.html">서비스로 이동</a></div>
+  </div>
+  <div class="banner">
+    <div class="banner-img">
+      <img src="images/hero-containers-bright.jpg" width="1344" height="752" alt="파랑과 청록 컨테이너가 정면으로 높이 쌓인 항만의 컨테이너 벽. 맑은 하늘 아래 밝은 낮 풍경이다." fetchpriority="high">
+      <span class="ai-tag">AI로 생성한 이미지</span>
+    </div>
+    <div class="wrap banner-wrap">
+      <div class="hero-panel">
+      <h1>선적일 하나로,<br><strong>모든 마감일</strong>을 거꾸로.</h1>
+      <p class="lead">해외영업 담당자가 선적일에서 단계별 마감일을 거꾸로 계산하고, 일정이 모자란 것을 바로 알 수 있게 만든 도구입니다. 무엇을 풀려고 했고 어떤 결정을 했는지 정리했습니다.</p>
+      <div class="acts">
+        <a class="btn" href="index.html">서비스 써 보기</a>
+        <a class="btn line" href="#decisions">내린 결정 보기</a>
+      </div>
+    
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="frame-wrap">
+      <div class="frame" role="img" aria-label="서비스 예시 화면: 선적일 2027-03-15 기준 단계별 마감일과 타임라인">
+        <div class="frame-bar"><span>선적일 역산 캘린더 · 예시 화면</span><span>기준일 2026-11-13 · 일반 제조 예시값</span></div>
+        <div class="frame-body">
+          <div class="f-top">
+            <div class="f-etd"><small>선적일 (ETD)</small><b>2027-03-15</b></div>
+            <div class="f-kpis">
+              <div class="f-kpi"><small>선적까지</small><b>D-122</b></div>
+              <div class="f-kpi"><small>첫 단계 마감</small><b>12-09</b></div>
+              <div class="f-kpi"><small>여유</small><b>26일</b> <i>여유</i></div>
+            </div>
+          </div>
+          <div class="bar" aria-hidden="true">
+            <div style="width:14.6%;background:#0E2744">PO 접수</div>
+            <div style="width:14.6%;background:#153A66">사양·도면 확정</div>
+            <div style="width:21.9%;background:#1B4D86">샘플 승인</div>
+            <div style="width:7.3%;background:#215F9F"></div>
+            <div style="width:3.1%;background:#2570AE"></div>
+            <div style="width:31.3%;background:#1B80A8">생산 시작</div>
+            <div style="width:3.1%;background:#0F8A9D"></div>
+            <div style="width:4.1%;background:#0B7F8A"></div>
+          </div>
+          <table class="f-table">
+            <tr><td><span class="dot" style="background:#0E2744"></span>PO 접수</td><td>2026-12-09 (수)</td><td>D-26</td><td><span class="ok">여유</span></td></tr>
+            <tr><td><span class="dot" style="background:#153A66"></span>사양·도면 확정</td><td>2026-12-23 (수)</td><td>D-40</td><td><span class="ok">여유</span></td></tr>
+            <tr class="hide-m"><td><span class="dot" style="background:#1B4D86"></span>샘플 승인</td><td>2027-01-06 (수)</td><td>D-54</td><td><span class="ok">여유</span></td></tr>
+            <tr class="hide-m"><td><span class="dot" style="background:#215F9F"></span>원자재·부품 입고</td><td>2027-01-27 (수)</td><td>D-75</td><td><span class="ok">여유</span></td></tr>
+            <tr class="last"><td>선적 (ETD)</td><td>2027-03-15 (월)</td><td>D-122</td><td></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+<div class="wrap">
+
+  <section>
+    <div class="split">
+      <div>
+        <p class="eyebrow">풀려고 한 문제</p>
+        <h2>선적일은 정해졌는데, <strong>마감일은 손으로</strong> 셉니다.</h2>
+      </div>
+      <div class="body">
+        <p>해외영업 담당자는 공장·바이어와 일정을 맞춥니다. 선적일(ETD)이 정해지면 거기서 거꾸로 샘플 승인, 자재 입고, 생산, 검사 마감일을 계산해야 하고, 일정이 모자란 것을 뒤늦게 알아차리는 일이 생깁니다.</p>
+        <p class="sub">이 서비스는 선적일 하나를 넣으면 단계별 마감일과 일정 부족 여부를 바로 보여 줍니다. 아래는 일반 제조 예시값의 단계별 기간입니다.</p>
+        <div class="legs" role="img" aria-label="일반 제조 예시값: 8단계 합계 96일">
+          <div class="leg"><span>PO 접수</span><i style="width:46.7%;background:#0E2744"></i><b>14</b></div>
+          <div class="leg"><span>사양·도면 확정</span><i style="width:46.7%;background:#153A66"></i><b>14</b></div>
+          <div class="leg"><span>샘플 승인</span><i style="width:70%;background:#1B4D86"></i><b>21</b></div>
+          <div class="leg"><span>자재 입고</span><i style="width:23.3%;background:#215F9F"></i><b>7</b></div>
+          <div class="leg"><span>양산 전 승인</span><i style="width:10%;background:#2570AE"></i><b>3</b></div>
+          <div class="leg"><span>생산 시작</span><i style="width:100%;background:#1B80A8"></i><b>30</b></div>
+          <div class="leg"><span>생산 완료</span><i style="width:10%;background:#0F8A9D"></i><b>3</b></div>
+          <div class="leg"><span>최종 검사</span><i style="width:13.3%;background:#0B7F8A"></i><b>4</b></div>
+        </div>
+        <p class="legs-cap">단위: 일. 8단계 합계 96일(예시값). 실제 기간은 공장·품목마다 다릅니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="split">
+      <div>
+        <p class="eyebrow">누구를 위한 것인가</p>
+        <h2>수출 기업의 <strong>해외영업 담당자</strong></h2>
+      </div>
+      <div class="body">
+        <p>특정 업종 전용이 아니라 전기·전자, 의료기기, 제약, 방위 업종에서 쓸 수 있게 만들었습니다. 산업을 고르면 그 업종에서 흔한 단계 구성(예: 인허가, 수출허가)이 예시값으로 채워집니다.</p>
+        <p class="sub">공장·바이어와 일정을 맞추고, 납기를 회신하고, 마감일을 챙기는 사람이 쓰는 도구라고 생각하고 설계했습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="decisions">
+    <p class="eyebrow">내린 결정</p>
+    <h2>무엇을 넣고, <strong>무엇을 뺐는지.</strong></h2>
+    <ul class="decisions">
+      <li><h3>랜딩 페이지 없이 도구를 첫 화면으로</h3><p>목표가 "1분 안에 일정을 복사한다"여서 사용 전 단계를 늘리지 않았습니다. 설명은 이 페이지로 분리했습니다.</p></li>
+      <li><h3>첫 화면의 단 하나의 행동은 "선적일 넣기"</h3><p>오더명, 바이어, 리드타임 수정은 아래 접이식 영역으로 내려 보조 기능으로 두었습니다.</p></li>
+      <li><h3>서비스 이름에서 "T&amp;A" 제거</h3><p>T&amp;A(Time &amp; Action)는 의류업에서 쓰는 용어로 확인되어, 여러 업종에서 쓸 이름으로 "선적일 역산 캘린더"를 골랐습니다.</p></li>
+      <li><h3>순방향 계산 추가</h3><p>영업 담당자는 "이 날짜에 선적 가능한가?"를 먼저 묻는 경우가 많다고 생각해서, PO 접수일에서 가능한 가장 빠른 선적일과 바이어 요청일과의 차이를 보여 줍니다.</p></li>
+      <li><h3>공휴일은 직접 입력</h3><p>2026·2027년 한국 공휴일을 검색했지만 출처마다 날짜와 개수가 달라 확정하지 못했습니다. 틀린 목록을 넣는 것보다 사용자가 공식 달력에서 확인해 넣게 했습니다.</p></li>
+      <li><h3>인허가 단계에 "기간 변동 큼" 표시</h3><p>인증·인허가·수출허가는 기간이 크게 달라질 수 있어, 전체 여유가 14일 미만이면 주의 문구를 띄웁니다.</p></li>
+      <li><h3>서버 없이 브라우저 저장소만 사용</h3><p>입력한 오더명·바이어명이 외부로 나가지 않습니다. 대신 저장한 오더는 그 브라우저에서만 보입니다.</p></li>
+    </ul>
+  </section>
+
+  <section>
+    <p class="eyebrow">할 수 있는 것</p>
+    <h2>계산하고, <strong>비교하고, 내보냅니다.</strong></h2>
+    <div class="feats">
+      <div><h3>계산</h3><ul><li>선적일에서 거꾸로 단계별 마감일</li><li>일정 부족 경고, 타임라인 막대</li><li>PO 접수일에서 가능한 가장 빠른 선적일</li><li>바이어 요청 선적일과 비교</li></ul></div>
+      <div><h3>입력</h3><ul><li>산업별 예시 단계 5가지</li><li>단계 이름(한·영)과 기간 수정</li><li>주말 제외, 입력한 휴일 제외</li><li>여러 오더 저장·불러오기·삭제</li></ul></div>
+      <div><h3>내보내기</h3><ul><li>한국어·영어 일정 텍스트 복사</li><li>캘린더 파일(.ics)</li></ul></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">실제 화면</p>
+    <h2>한 화면에서 <strong>계산하고 비교합니다.</strong></h2>
+    <figure class="flow">
+      <picture>
+        <source media="(prefers-reduced-motion: reduce)" srcset="images/flow-still.png">
+        <img id="flowImg" src="images/flow.gif" width="868" height="694" alt="입력에 따라 결과가 바뀌는 순서. 정상(여유 26일), 선적일을 당기면 일정 부족 6개, 전기·전자 산업에서 여유 5일이면 임박과 변동 큰 단계 주의, PO 접수일 기준 순방향으로 가능한 선적일 계산, 바이어 요청일이 더 빠르면 요청일 초과 53일 순으로 보여 준다.">
+      </picture>
+      <figcaption>
+        <span><b>입력이 바뀌면 결과도 바로 바뀝니다</b>정상 → 일정 부족 → 전기·전자 임박·주의 → PO 기준 순방향 → 요청일 초과 순서로 반복됩니다.</span>
+        <button type="button" class="pause" id="flowBtn" aria-pressed="false">움직임 멈추기</button>
+      </figcaption>
+    </figure>
+    <div class="shots">
+      <figure>
+        <a href="images/screen-desktop.png" target="_blank" rel="noopener"><img src="images/screen-desktop.png" alt="선적일 2027-03-15를 넣은 일반 제조 화면. 선적까지 D-122, 첫 단계 마감 12-09, 여유 26일이 크게 보이고 아래에 단계별 마감일 표가 있다." loading="lazy"></a>
+        <figcaption><b>선적일에서 역산</b>일반 제조 예시값, 기준일 2026-11-13. 클릭하면 크게 봅니다.</figcaption>
+      </figure>
+      <figure>
+        <a href="images/screen-defense-forward.png" target="_blank" rel="noopener"><img src="images/screen-defense-forward.png" alt="방위 산업을 고르고 PO 접수일 2026-12-01과 바이어 요청 선적일 2027-09-30을 넣은 화면. 가능한 선적일 2027-06-23, 여유 99일, 수출 허가 단계에 기간 변동 큼 표시가 있다." loading="lazy"></a>
+        <figcaption><b>PO 접수일에서 순방향</b>방위 산업, 바이어 요청 선적일과 비교. 수출 허가 단계에 "기간 변동 큼" 표시.</figcaption>
+      </figure>
+      <figure class="mobile">
+        <a href="images/screen-mobile.png" target="_blank" rel="noopener"><img src="images/screen-mobile.png" alt="휴대폰 폭에서도 같은 선적일 입력, 산업 선택, 핵심 숫자가 세로로 쌓여 보이는 화면." loading="lazy"></a>
+        <figcaption><b>휴대폰 폭(390px)</b>입력, 산업 선택, 핵심 숫자가 세로로 쌓입니다.</figcaption>
+      </figure>
+    </div>
+    <p class="legs-cap">화면 캡처는 특정 날짜 기준이라 직접 열어 보면 오늘 날짜 기준 값으로 보입니다.</p>
+  </section>
+
+  <section>
+    <div class="split">
+      <div>
+        <p class="eyebrow">솔직한 한계</p>
+        <h2>아직 <strong>못 한 것.</strong></h2>
+      </div>
+      <div class="limits">
+        <ul>
+          <li><b>업종별 단계 이름과 기간은 예시입니다.</b> 일반적인 흐름을 바탕으로 만든 초안이고 실제 규정 문서로 하나씩 대조하지는 못했습니다. 의료기기와 제약은 근거가 특히 부족합니다.</li>
+          <li><b>실제 사용자에게 써 보게 한 적은 없습니다.</b> 영업 담당자가 어떤 상황에서 쓰는지는 아직 가설입니다.</li>
+          <li>단계는 일렬로만 이어집니다. 인증과 생산처럼 동시에 진행되는 단계는 표현하지 못합니다.</li>
+          <li>공장 휴무와 운송 지연은 자동 반영하지 않습니다.</li>
+          <li>저장한 오더는 다른 기기와 공유되지 않습니다.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="split">
+      <div>
+        <p class="eyebrow">만든 방식</p>
+        <h2>가볍게, <strong>서버 없이.</strong></h2>
+      </div>
+      <div class="body">
+        <p>순수 HTML 파일로 만들었고 별도 빌드나 서버가 없습니다. 입력값은 브라우저 저장소(<code>localStorage</code>)에만 저장됩니다. 디자인 기준은 색 토큰, 글꼴(IBM Plex Sans KR·Plex Mono), 8px 간격, 버튼 5가지 상태를 문서로 정해 두고 그에 맞췄습니다.</p>
+        <p class="sub">다음에 하고 싶은 것: 영업 담당자 2~3명에게 보여 주고 "언제 쓸 것 같은지" 듣기 · 업종별 단계를 공식 자료로 검수하고 출처를 화면에 표시 · 공식 자료로 검증된 나라별 공휴일 목록 · 동시에 진행되는 단계 표현</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="cta">
+  <div class="wrap">
+    <h2>선적일을 넣고, <strong>직접 계산해 보세요.</strong></h2>
+    <p>처음 열면 예시 값이 채워져 있습니다. 선적일을 내 오더 날짜로 바꾸면 바로 결과가 바뀝니다.</p>
+    <div class="acts"><a class="btn" href="index.html">서비스 써 보기</a></div>
+  </div>
+</div>
+</main>
+
+<footer><div class="wrap">화면에 나온 단계와 기간은 모두 예시이며 실제 일정은 공식 절차와 담당 기관에서 확인해야 합니다.</div></footer>
+<script>
+  // GIF는 멈출 수 없으므로, 버튼으로 정지 이미지와 번갈아 보여 준다
+  (function(){
+    var img=document.getElementById("flowImg"), btn=document.getElementById("flowBtn");
+    if(!img||!btn) return;
+    var playing=true;
+    btn.addEventListener("click",function(){
+      playing=!playing;
+      img.src = playing ? "images/flow.gif" : "images/flow-still.png";
+      btn.textContent = playing ? "움직임 멈추기" : "움직임 다시 보기";
+      btn.setAttribute("aria-pressed", playing ? "false" : "true");
+    });
+  })();
+</script>
+</body>
+</html>
