@@ -191,14 +191,30 @@
     .btn{transition:none}
     .btn:active{transform:none}
   }
+  /* 공통 상단 탭: 소개 <-> 시연 */
+  [id]{scroll-margin-top:72px}
+  .topbar{position:sticky;top:0;z-index:30;background:#0E2744;border-bottom:1px solid rgba(255,255,255,.18)}
+  .topbar-in{max-width:1120px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:56px}
+  .topbar .brand{color:#fff;font-weight:600;font-size:15px;white-space:nowrap}
+  .tabs{display:flex;gap:24px}
+  .tabs a{display:inline-flex;align-items:center;min-height:56px;color:rgba(255,255,255,.72);text-decoration:none;font-size:15px;border-bottom:3px solid transparent;padding-top:3px;transition:transform 150ms cubic-bezier(.23,1,.32,1)}
+  .tabs a:hover{color:#fff;transform:translateY(-1px)}
+  .tabs a[aria-current="page"]{color:#fff;font-weight:600;border-bottom-color:#fff}
+  .tabs a:focus-visible{outline:3px solid #9CC3F6;outline-offset:-3px}
+  @media(max-width:640px){.topbar-in{padding:0 16px}.tabs{gap:16px}.topbar .brand{font-size:14px}.tabs a{font-size:14px}}
+  @media (prefers-reduced-motion:reduce){.tabs a{transition:none}.tabs a:hover{transform:none}}
 </style>
 </head>
 <body>
 
+<div class="topbar"><div class="topbar-in">
+  <span class="brand">선적일 역산 캘린더</span>
+  <nav class="tabs" aria-label="페이지 이동">
+    <a href="index.html" aria-current="page">서비스 소개</a>
+    <a href="app.html">서비스 시연</a>
+  </nav>
+</div></div>
 <div class="hero">
-  <div class="wrap">
-    <div class="nav"><b>선적일 역산 캘린더</b><a href="app.html">서비스로 이동</a></div>
-  </div>
   <div class="banner">
     <div class="banner-img">
       <img src="images/hero-containers-bright.jpg" width="1344" height="752" alt="파랑과 청록 컨테이너가 정면으로 높이 쌓인 항만의 컨테이너 벽. 맑은 하늘 아래 밝은 낮 풍경이다." fetchpriority="high">
