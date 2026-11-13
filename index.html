@@ -192,16 +192,16 @@
     .btn:active{transform:none}
   }
   /* 공통 상단 탭: 소개 <-> 시연 */
-  [id]{scroll-margin-top:72px}
+  [id]{scroll-margin-top:84px}
   .topbar{position:sticky;top:0;z-index:30;background:#0E2744;border-bottom:1px solid rgba(255,255,255,.18)}
-  .topbar-in{max-width:1120px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:56px}
-  .topbar .brand{color:#fff;font-weight:600;font-size:15px;white-space:nowrap}
+  .topbar-in{max-width:1120px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:68px}
+  .topbar .brand{color:#fff;font-weight:700;font-size:20px;letter-spacing:-.01em;white-space:nowrap}
   .tabs{display:flex;gap:24px}
-  .tabs a{display:inline-flex;align-items:center;min-height:56px;color:rgba(255,255,255,.72);text-decoration:none;font-size:15px;border-bottom:3px solid transparent;padding-top:3px;transition:transform 150ms cubic-bezier(.23,1,.32,1)}
+  .tabs a{display:inline-flex;align-items:center;min-height:68px;color:rgba(255,255,255,.78);text-decoration:none;font-size:17px;border-bottom:3px solid transparent;padding-top:3px;transition:transform 150ms cubic-bezier(.23,1,.32,1)}
   .tabs a:hover{color:#fff;transform:translateY(-1px)}
   .tabs a[aria-current="page"]{color:#fff;font-weight:600;border-bottom-color:#fff}
   .tabs a:focus-visible{outline:3px solid #9CC3F6;outline-offset:-3px}
-  @media(max-width:640px){.topbar-in{padding:0 16px}.tabs{gap:16px}.topbar .brand{font-size:14px}.tabs a{font-size:14px}}
+  @media(max-width:640px){.topbar-in{padding:0 16px}.tabs{gap:16px}.topbar .brand{font-size:16px}.tabs a{font-size:15px}.tabs a{min-height:60px}.topbar-in{min-height:60px}}
   @media (prefers-reduced-motion:reduce){.tabs a{transition:none}.tabs a:hover{transform:none}}
 </style>
 </head>
@@ -328,7 +328,7 @@
     <div class="feats">
       <div><h3>계산</h3><ul><li>선적일에서 거꾸로 단계별 마감일</li><li>일정 부족 경고, 타임라인 막대</li><li>PO 접수일에서 가능한 가장 빠른 선적일</li><li>바이어 요청 선적일과 비교</li></ul></div>
       <div><h3>입력</h3><ul><li>산업별 예시 단계 5가지</li><li>단계 이름(한·영)과 기간 수정</li><li>주말 제외, 입력한 휴일 제외</li><li>여러 오더 저장·불러오기·삭제</li></ul></div>
-      <div><h3>내보내기</h3><ul><li>한국어·영어 일정 텍스트 복사</li><li>캘린더 파일(.ics)</li></ul></div>
+      <div><h3>내보내기</h3><ul><li>한국어·영어 일정 텍스트 복사</li><li>캘린더 파일(.ics), 엑셀(CSV)</li><li>공유 링크(입력한 값이 주소에 담김)</li></ul></div>
     </div>
   </section>
 
@@ -374,7 +374,7 @@
           <li><b>실제 사용자에게 써 보게 한 적은 없습니다.</b> 영업 담당자가 어떤 상황에서 쓰는지는 아직 가설입니다.</li>
           <li>단계는 일렬로만 이어집니다. 인증과 생산처럼 동시에 진행되는 단계는 표현하지 못합니다.</li>
           <li>공장 휴무와 운송 지연은 자동 반영하지 않습니다.</li>
-          <li>저장한 오더는 다른 기기와 공유되지 않습니다.</li>
+          <li>저장한 오더 목록은 이 브라우저에만 남습니다. 한 건의 일정은 공유 링크로 보낼 수 있지만, 링크에는 입력한 오더명·바이어명이 담깁니다.</li>
         </ul>
       </div>
     </div>

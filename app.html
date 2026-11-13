@@ -272,16 +272,16 @@
     .toast{transition:none}
   }
   /* 공통 상단 탭: 소개 <-> 시연 */
-  [id]{scroll-margin-top:72px}
+  [id]{scroll-margin-top:84px}
   .topbar{position:sticky;top:0;z-index:30;background:#0E2744;border-bottom:1px solid rgba(255,255,255,.18)}
-  .topbar-in{max-width:1120px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:56px}
-  .topbar .brand{color:#fff;font-weight:600;font-size:15px;white-space:nowrap}
+  .topbar-in{max-width:1120px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:68px}
+  .topbar .brand{color:#fff;font-weight:700;font-size:20px;letter-spacing:-.01em;white-space:nowrap}
   .tabs{display:flex;gap:24px}
-  .tabs a{display:inline-flex;align-items:center;min-height:56px;color:rgba(255,255,255,.72);text-decoration:none;font-size:15px;border-bottom:3px solid transparent;padding-top:3px;transition:transform 150ms cubic-bezier(.23,1,.32,1)}
+  .tabs a{display:inline-flex;align-items:center;min-height:68px;color:rgba(255,255,255,.78);text-decoration:none;font-size:17px;border-bottom:3px solid transparent;padding-top:3px;transition:transform 150ms cubic-bezier(.23,1,.32,1)}
   .tabs a:hover{color:#fff;transform:translateY(-1px)}
   .tabs a[aria-current="page"]{color:#fff;font-weight:600;border-bottom-color:#fff}
   .tabs a:focus-visible{outline:3px solid #9CC3F6;outline-offset:-3px}
-  @media(max-width:640px){.topbar-in{padding:0 16px}.tabs{gap:16px}.topbar .brand{font-size:14px}.tabs a{font-size:14px}}
+  @media(max-width:640px){.topbar-in{padding:0 16px}.tabs{gap:16px}.topbar .brand{font-size:16px}.tabs a{font-size:15px}.tabs a{min-height:60px}.topbar-in{min-height:60px}}
   @media (prefers-reduced-motion:reduce){.tabs a{transition:none}.tabs a:hover{transform:none}}
 </style>
 </head>
@@ -347,7 +347,7 @@
   </div>
   <div class="htl" id="htl" aria-hidden="true"></div>
   <div class="intro">
-    <p>처음 열면 예시 값이 채워져 있습니다. 선적일을 내 오더 날짜로 바꿔 보세요.</p>
+    <p id="introMsg">처음 열면 예시 값이 채워져 있습니다. 선적일을 내 오더 날짜로 바꿔 보세요.</p>
     <button type="button" class="linkbtn" id="demoBtn">예시로 다시 시작</button>
   </div>
 </div></header>
@@ -376,7 +376,9 @@
         </div>
         <textarea id="preview" readonly aria-label="복사할 일정 텍스트" placeholder="날짜를 입력하면 복사할 일정이 여기에 만들어집니다."></textarea>
         <button class="btn block" id="icsBtn">캘린더 파일(.ics) 받기</button>
-        <p class="hint">영어 일정은 공장·바이어에게 보내는 용도입니다. .ics 파일은 구글·애플·아웃룩 캘린더에서 열 수 있습니다. 복사가 막힌 환경에서는 상자의 글을 직접 선택해 복사하세요.</p>
+        <button class="btn block" id="csvBtn">엑셀(CSV) 받기</button>
+        <button class="btn block" id="shareBtn">공유 링크 복사</button>
+        <p class="hint">영어 일정은 공장·바이어에게 보내는 용도입니다. .ics 파일은 구글·애플·아웃룩 캘린더에서, CSV는 엑셀에서 열 수 있습니다. <b>공유 링크에는 입력한 오더명·바이어명이 함께 담기니</b>, 원치 않으면 비우고 복사하세요. 복사가 막힌 환경에서는 상자의 글을 직접 선택해 복사하세요.</p>
       </section>
 
       <section class="side-plain">
@@ -544,7 +546,8 @@ function snapshot(){
   return {mode:$("mode").value,order:$("order").value.trim(),buyer:$("buyer").value.trim(),etd:$("etd").value,po:$("po").value,req:$("reqEtd").value,
     biz:$("biz").checked,preset:$("preset").value,holidays:$("holidays").value,stages:stages.map(s=>({...s}))};
 }
-function save(){ store.set(CUR_KEY,JSON.stringify(snapshot())); }
+let ephemeral=false; // 공유 링크로 연 상태는 수정하기 전까지 이 브라우저에 저장하지 않는다
+function save(){ if(ephemeral) return; store.set(CUR_KEY,JSON.stringify(snapshot())); }
 function load(){ try{ const raw=store.get(CUR_KEY); if(raw) return JSON.parse(raw); }catch(e){} return null; }
 function getOrders(){ try{ const a=JSON.parse(store.get(ORD_KEY)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function setOrders(a){ store.set(ORD_KEY,JSON.stringify(a)); }
@@ -769,6 +772,69 @@ function downloadICS(){
   toast("캘린더 파일(.ics)을 만들었습니다");
 }
 
+// ---------- 엑셀(CSV) 내보내기 ----------
+function csvCell(v){
+  if(typeof v==="string" && /^[=+\-@]/.test(v)) v="'"+v;   // 엑셀 수식으로 해석되는 것을 막는다
+  v=String(v);
+  return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v;
+}
+function buildCSV(r){
+  const {rows,etd,base}=r;
+  const first=rows[0].date;
+  const late=r.mode==="back" && diffDays(first,base)<0;
+  const L=[["선적일 역산 캘린더"],["오더명",$("order").value.trim()],["바이어",$("buyer").value.trim()],
+    ["선적일(ETD)",fmt(etd)+" ("+wd(etd)+")"],["기준일",fmt(base)],[],
+    ["번호","단계","Stage","마감일","요일","기준일부터","상태","비고"]];
+  rows.forEach((row,i)=>{
+    const n=diffDays(row.date,base);
+    const st=late&&n<0 ? "일정 부족" : status(row.date,base).txt;
+    const note=[row.unc?"기간 변동 큼":"", isWeekend(row.date)?"주말":(hs.has(fmt(row.date))?"휴일":"")].filter(Boolean).join(", ");
+    L.push([i+1,row.ko,row.en,fmt(row.date),wd(row.date),dLabel(n),st,note]);
+  });
+  L.push([rows.length+1,"선적 (ETD)","Shipment (ETD)",fmt(etd),wd(etd),dLabel(diffDays(etd,base)),"",""]);
+  return "﻿"+L.map(r=>r.map(csvCell).join(",")).join("\r\n")+"\r\n";
+}
+function downloadCSV(){
+  const r=compute(); if(!r||!stages.length){ toast("일정을 먼저 계산하세요"); return; }
+  const name=($("order").value.trim()||"선적일정").replace(/[\\/:*?"<>|]/g,"_");
+  const blob=new Blob([buildCSV(r)],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name+".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast("엑셀(CSV) 파일을 만들었습니다");
+}
+
+// ---------- 공유 링크 (입력값을 주소 뒤에 담는다. 서버를 거치지 않음) ----------
+function b64enc(str){ return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+function b64dec(s){ s=s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="="; return decodeURIComponent(escape(atob(s))); }
+function buildShareLink(){
+  const sn=snapshot();
+  const p={v:1,m:sn.mode,e:sn.etd,p:sn.po,r:sn.req,b:sn.biz?1:0,pr:sn.preset,h:sn.holidays,o:sn.order,by:sn.buyer};
+  if(isEdited()) p.st=sn.stages.map(x=>[x.ko,x.en,leadOf(x),x.unc?1:0]);
+  return location.href.split("#")[0]+"#s="+b64enc(JSON.stringify(p));
+}
+function readShared(){
+  try{
+    const m=location.hash.match(/^#s=([A-Za-z0-9_-]+)$/); if(!m) return null;
+    const p=JSON.parse(b64dec(m[1])); if(!p||p.v!==1) return null;
+    const date=x=>(typeof x==="string" && /^\d{4}-\d{2}-\d{2}$/.test(x)) ? x : "";
+    const str=(x,n)=>typeof x==="string" ? x.slice(0,n) : "";
+    const out={mode:p.m==="fwd"?"fwd":"back",etd:date(p.e),po:date(p.p),req:date(p.r),biz:!!p.b,
+      preset:PRESETS[p.pr]?p.pr:"general",holidays:str(p.h,2000),order:str(p.o,80),buyer:str(p.by,80)};
+    if(Array.isArray(p.st) && p.st.length && p.st.length<=20){
+      out.stages=p.st.map(a=>{ const o={ko:str(a[0],80),en:str(a[1],80),lead:Math.min(365,Math.max(0,parseInt(a[2])||0))}; if(a[3]) o.unc=true; return o; });
+    }
+    return out;
+  }catch(e){ return null; }
+}
+async function copyShare(){
+  if(!compute()){ toast("날짜를 먼저 입력하세요"); return; }
+  const url=buildShareLink();
+  try{ await navigator.clipboard.writeText(url); toast("공유 링크를 복사했습니다"); }
+  catch(e){ window.prompt("아래 링크를 복사하세요 (Ctrl+C)",url); }
+}
+
 // ---------- 저장한 오더 ----------
 function summarize(o){
   const set=parseHolidays(o.holidays), base=parse(todayStr());
@@ -798,7 +864,7 @@ function saveOrder(){
 }
 
 function setActions(on){
-  ["copyKo","copyEn","icsBtn"].forEach(id=>{ const b=$(id); b.disabled=!on; b.title=on?"":"날짜를 입력하면 쓸 수 있습니다"; });
+  ["copyKo","copyEn","icsBtn","csvBtn","shareBtn"].forEach(id=>{ const b=$(id); b.disabled=!on; b.title=on?"":"날짜를 입력하면 쓸 수 있습니다"; });
 }
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove("show"),1800); }
 async function copy(lang){
@@ -842,12 +908,18 @@ $("demoBtn").onclick=()=>{
 $("copyKo").onclick=()=>copy("ko");
 $("copyEn").onclick=()=>copy("en");
 $("icsBtn").onclick=downloadICS;
+$("csvBtn").onclick=downloadCSV;
+$("shareBtn").onclick=copyShare;
 $("saveOrder").onclick=saveOrder;
 $("ordList").addEventListener("click",e=>{
   const ld=e.target.dataset.load, dl=e.target.dataset.delord;
   if(ld){ const o=getOrders().find(x=>x.id===ld); if(o){ applyState(o); toast("불러왔습니다: "+o.order); window.scrollTo({top:0,behavior:"smooth"}); } }
   if(dl){ const o=getOrders().find(x=>x.id===dl); if(o && confirm(`"${o.order}" 오더를 삭제할까요?`)){ setOrders(getOrders().filter(x=>x.id!==dl)); renderOrders(); } }
 });
+
+// 공유 링크로 연 상태: 사용자가 값을 바꾸기 전에는 저장하지 않는다
+document.addEventListener("input",()=>{ ephemeral=false; },true);
+document.addEventListener("click",e=>{ if(e.target.closest && e.target.closest(".chip,.mode,#addBtn,#resetBtn,[data-del],#demoBtn,#restoreBtn,.weekend")) ephemeral=false; },true);
 
 // 키보드
 $("alertBox").addEventListener("click",e=>{ if(e.target.id==="restoreBtn") $("resetBtn").click(); });
@@ -868,7 +940,19 @@ document.addEventListener("keydown",e=>{
 
 // init
 $("base").value=todayStr();
-applyState(load());
+function loadSharedFromHash(){
+  const sh=readShared();
+  if(!sh) return false;
+  ephemeral=true; applyState(sh);
+  $("introMsg").textContent="공유받은 일정을 불러왔습니다. 값을 바꾸기 전에는 이 브라우저에 저장되지 않습니다.";
+  return true;
+}
+// 같은 탭에서 공유 링크를 붙여 넣어 주소의 # 부분만 바뀐 경우에도 불러온다
+window.addEventListener("hashchange",()=>{ if(location.hash.indexOf("#s=")===0 && !loadSharedFromHash()) toast("공유 링크를 읽지 못했습니다"); });
+if(!loadSharedFromHash()){
+  if(location.hash.indexOf("#s=")===0) toast("공유 링크를 읽지 못해 기본 화면을 열었습니다");
+  applyState(load());
+}
 renderOrders();
 </script>
 </body>
