@@ -52,7 +52,6 @@
   .banner{position:relative;height:clamp(480px,50vw,640px)}
   .banner-img{position:absolute;inset:0;overflow:hidden;background:var(--color-header)}
   .banner-img img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 30%;animation:fade .9s var(--ease) both}
-  .ai-tag{position:absolute;right:var(--s3);bottom:var(--s2);font-size:12px;color:#fff;background:rgba(14,39,68,.72);padding:4px 10px;border-radius:4px}
   .banner-wrap{position:relative;height:100%;display:flex;align-items:flex-end}
   .hero-panel{background:var(--color-header);color:#fff;padding:var(--s4) var(--s6) var(--s4) var(--s4);margin-left:calc(-1 * var(--s4));max-width:640px;animation:rise .6s var(--ease) .2s both}
   .hero-panel h1{font-size:46px}
@@ -60,7 +59,7 @@
   @keyframes fade{from{opacity:0}to{opacity:1}}
   @media(max-width:900px){
     .banner{height:auto}
-    .banner-img{position:relative;height:240px}
+    .banner-img{position:relative;height:clamp(200px,52vw,320px)}
     .banner-wrap{display:block;height:auto}
     .hero-panel{max-width:none;margin-left:0;padding:var(--s4) 0 0}
     .hero-panel h1{font-size:32px}
@@ -160,6 +159,7 @@
   .cta h2{color:#fff;max-width:640px;margin-bottom:var(--s3)}
   .cta p{margin:0 0 var(--s4);color:rgba(255,255,255,.8);max-width:560px;font-size:17px}
   footer{padding:var(--s3) 0 var(--s6);font-size:13px;color:var(--color-text-sub)}
+  footer .credit{display:block;margin-top:var(--s1);font-size:12px}
   @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
   @media(max-width:900px){
@@ -218,7 +218,6 @@
   <div class="banner">
     <div class="banner-img">
       <img src="images/hero-containers-bright.jpg" width="1344" height="752" alt="파랑과 청록 컨테이너가 정면으로 높이 쌓인 항만의 컨테이너 벽. 맑은 하늘 아래 밝은 낮 풍경이다." fetchpriority="high">
-      <span class="ai-tag">AI로 생성한 이미지</span>
     </div>
     <div class="wrap banner-wrap">
       <div class="hero-panel">
@@ -404,7 +403,7 @@
 </div>
 </main>
 
-<footer><div class="wrap">화면에 나온 단계와 기간은 모두 예시이며 실제 일정은 공식 절차와 담당 기관에서 확인해야 합니다.</div></footer>
+<footer><div class="wrap">화면에 나온 단계와 기간은 모두 예시이며 실제 일정은 공식 절차와 담당 기관에서 확인해야 합니다.<span class="credit">이미지: AI 생성</span></div></footer>
 <script>
   // GIF는 멈출 수 없으므로, 버튼으로 정지 이미지와 번갈아 보여 준다
   (function(){
